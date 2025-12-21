@@ -1,0 +1,5 @@
+Code/__pycache__/*
+prospector/venv/*
+venv/*
+Code/resources/__pycache__/*
+.DS_Store

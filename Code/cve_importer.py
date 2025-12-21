@@ -33,6 +33,108 @@ if cf.SAMPLE_LIMIT > 0:
 
 # ---------------------------------------------------------------------------------------------------------------------
 
+def _ensure_v1_like_structure(root_json: dict) -> dict:
+    """
+    Convert an NVD v2.0 top-level JSON (with 'vulnerabilities') into a
+    v1.1-like dict that contains a 'CVE_Items' list so the existing
+    preprocessing pipeline can continue to work with minimal changes.
+    This is a best-effort mapper: it maps key fields based on the
+    provided migration guide (id, sourceIdentifier, published, lastModified,
+    descriptions, references, metrics, configurations).
+    """
+    if not isinstance(root_json, dict):
+        return root_json
+
+    # If it's already v1-like, return as-is
+    if 'CVE_Items' in root_json:
+        return root_json
+
+    # If v2-style
+    if 'vulnerabilities' in root_json:
+        v2_list = root_json.get('vulnerabilities', [])
+        cve_items = []
+        for wrapper in v2_list:
+            cve_item = wrapper.get('cve', {})
+            item = {}
+
+            # Top-level published / modified dates
+            item['publishedDate'] = cve_item.get('published')
+            item['lastModifiedDate'] = cve_item.get('lastModified')
+
+            # Build a v1-like cve sub-dict
+            cve_v1 = {}
+            # Meta
+            cve_v1['CVE_data_meta'] = {
+                'ID': cve_item.get('id'),
+                'ASSIGNER': cve_item.get('sourceIdentifier')
+            }
+
+            # Descriptions
+            # v1 had description.description_data (list) ; v2 has descriptions (list)
+            if 'descriptions' in cve_item:
+                cve_v1['description'] = {'description_data': cve_item.get('descriptions', [])}
+            else:
+                cve_v1['description'] = {'description_data': []}
+
+            # References: map list -> reference_data list
+            refs = []
+            for r in cve_item.get('references', []) or []:
+                refs.append({
+                    'url': r.get('url'),
+                    'source': r.get('source')
+                })
+            cve_v1['references'] = {'reference_data': refs}
+
+            # Problem type / weaknesses (best-effort)
+            if 'weaknesses' in cve_item and cve_item.get('weaknesses'):
+                # some v2 variants use weaknesses with description lists
+                cve_v1['problemtype'] = {'problemtype_data': cve_item.get('weaknesses')}
+            else:
+                cve_v1['problemtype'] = {'problemtype_data': []}
+
+            item['cve'] = cve_v1
+
+            # Map configurations: take first configurations entry's nodes if present
+            cfg = cve_item.get('configurations')
+            if isinstance(cfg, list) and len(cfg) > 0 and isinstance(cfg[0], dict):
+                item['configurations'] = {'nodes': cfg[0].get('nodes', [])}
+            else:
+                item['configurations'] = {'nodes': []}
+
+            # Map metrics -> impact.baseMetricV3 / baseMetricV2 (best-effort)
+            impact = {}
+            metrics = cve_item.get('metrics', {}) or {}
+            # CVSS v3.1 or v3.0
+            cvss_v31 = metrics.get('cvssMetricV31') or []
+            cvss_v30 = metrics.get('cvssMetricV30') or []
+            if cvss_v31 or cvss_v30:
+                chosen = (cvss_v31 or cvss_v30)[0]
+                cvss_data = chosen.get('cvssData', {})
+                bm3 = {'cvssV3': cvss_data}
+                # attach scores if present
+                if 'exploitabilityScore' in chosen:
+                    bm3['exploitabilityScore'] = chosen.get('exploitabilityScore')
+                if 'impactScore' in chosen:
+                    bm3['impactScore'] = chosen.get('impactScore')
+                impact['baseMetricV3'] = bm3
+
+            # CVSS v2
+            cvss_v2 = metrics.get('cvssMetricV2') or []
+            if cvss_v2:
+                chosen2 = cvss_v2[0]
+                cvss_v2_data = chosen2.get('cvssData', {})
+                impact['baseMetricV2'] = {'cvssV2': cvss_v2_data}
+
+            item['impact'] = impact
+
+            cve_items.append(item)
+
+        return {'CVE_Items': cve_items}
+
+    # Unknown structure: return input as a fallback
+    return root_json
+
+
 
 def rename_columns(name):
     """
@@ -127,9 +229,10 @@ def import_cves():
 
         # Check if the directory already has the json file or not ?
         # For now, never reuse the files to get new updates.
-        if False:  # os.path.isfile(Path(cf.DATA_PATH) / 'json' / extract_target) and year != currentYear:
+        if True:  # os.path.isfile(Path(cf.DATA_PATH) / 'json' / extract_target) and year != currentYear:
             cf.logger.warning(f'Reusing the {year} CVE json file that was downloaded earlier...')
-            json_file = Path(cf.DATA_PATH) / 'json' / extract_target
+            # json_file = Path(cf.DATA_PATH) / 'json' / extract_target
+            json_file = "Data/nvdcve-2.0-2025.json"
         else:
             # url_to_open = urlopen(zip_file_url, timeout=10)
             r = requests.get(zip_file_url)
@@ -139,10 +242,13 @@ def import_cves():
         with open(json_file) as f:
             yearly_data = json.load(f)
             # if year == INIT_YEAR:  # initialize the df_methods by the first year data
+            cf.logger.info(f'The CVE json for {year} has been merged')
+
+            # Ensure the data has v1-like structure before creating DataFrame
+            yearly_data = _ensure_v1_like_structure(yearly_data)
             df_cve = pd.DataFrame(yearly_data)
             # else:
             #     df_cve = pd.concat([df_cve, pd.DataFrame(yearly_data)], ignore_index=True)
-            cf.logger.info(f'The CVE json for {year} has been merged')
 
             df_cve = preprocess_jsons(df_cve)
             df_cve = df_cve.apply(lambda x: x.astype(str))

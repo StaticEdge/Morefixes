@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -6,13 +6,14 @@ services:
     command: postgres -c 'max_connections=1000'
     container_name: morefixes_db
     restart: always
-    env_file:
-      - .env
+    environment:
+      POSTGRES_USER: postgrescvedumper
+      POSTGRES_PASSWORD: a42a18537d74c3b7e584c769152c3d
+      POSTGRES_DB: postgrescvedumper
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data2:/var/lib/postgresql/data
-      - ./postgrescvedumper-2024-09-26.sql:/docker-entrypoint-initdb.d/postgrescvedumper-2024-09-26.sql
 
 volumes:
   postgres_data2:
