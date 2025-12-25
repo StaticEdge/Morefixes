@@ -560,7 +560,7 @@ if __name__ == '__main__':
     # Parse official CPE dictionary
     parse_cpe_dict()
 
-    apply_cve_cpe_mappers()
+    apply_cve_cpe_mappers() # crete the tavle
     #
     # end_time = time.perf_counter()
     # hours, minutes, seconds = convert_runtime(start_time, end_time)

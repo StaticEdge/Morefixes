@@ -4,3 +4,4 @@ venv/*
 Code/resources/__pycache__/*
 .DS_Store
 Data/*
+Code/official-cpe-dictionary_v2.3.xml
