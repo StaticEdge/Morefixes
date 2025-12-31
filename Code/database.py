@@ -17,7 +17,7 @@ def create_session():
     Create a SQLAlchemy Session to manage database transactions.
     """
     try:
-        db_url = f'postgresql://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("DB_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}'
+        db_url = f'postgresql://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}'
         # print("Database URL:", db_url)  # Debugging
         engine = sqlalchemy.create_engine(db_url)
         return Session(engine)  # Create a Session using the engine

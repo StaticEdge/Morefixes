@@ -1,6 +1,7 @@
 version: "3.8"
 
 services:
+  # 1. The Database Service (Your existing config)
   postgres:
     image: postgres:17
     command: postgres -c 'max_connections=1000'
@@ -11,9 +12,32 @@ services:
       POSTGRES_PASSWORD: a42a18537d74c3b7e584c769152c3d
       POSTGRES_DB: postgrescvedumper
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Maps Host Port 5433 -> Container Port 5432
+      # This allows you to connect from your Mac using localhost:5433
+      - "5433:5432"
     volumes:
       - postgres_data2:/var/lib/postgresql/data
+
+  # 2. The Python App Service
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: morefixes_app
+    depends_on:
+      - postgres
+    volumes:
+      - ./:/app  # Syncs your code for live updates
+    command: ["bash", "/app/Code/run.sh"]
+    environment:
+      # INTERNAL CONNECTION SETTINGS
+      # Note: We use the SERVICE NAME "postgres", not localhost
+      POSTGRES_HOST: postgres
+      # Note: We use the INTERNAL port 5432, not 5433
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgrescvedumper
+      POSTGRES_PASSWORD: a42a18537d74c3b7e584c769152c3d
+      POSTGRES_DB: postgrescvedumper
 
 volumes:
   postgres_data2:
