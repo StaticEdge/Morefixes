@@ -17,10 +17,10 @@ logger "Github database update done"
 # mv official-cpe-dictionary_v2.3.xml Code/
 # logger "Updating download done"
 
-logger "Updating debian list"
-wget https://salsa.debian.org/security-tracker-team/security-tracker/-/raw/master/data/CVE/list?inline=false -O debian-list.txt
-mv debian-list.txt Code/
-logger "Debian security list done"
+# logger "Updating debian list"
+# wget https://salsa.debian.org/security-tracker-team/security-tracker/-/raw/master/data/CVE/list?inline=false -O debian-list.txt
+# mv debian-list.txt Code/
+# logger "Debian security list done"
 
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

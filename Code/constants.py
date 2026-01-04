@@ -207,7 +207,7 @@ REPO_COLUMNS = [
 
 # ------------------------------------------- cve_importer.py ----------------------------------------------------------
 
-URL_HEAD = 'https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-'
+URL_HEAD = '/home/anupa/Desktop/FYP/Morefixes/Data/nvdcve-2.0-'
 URL_TAIL = '.json.zip'
 INIT_YEAR = 2002
 ORDERED_CVE_COLUMNS = ['cve_id', 'published_date', 'last_modified_date', 'description', 'nodes', 'severity',
