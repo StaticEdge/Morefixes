@@ -6,3 +6,16 @@ Code/resources/__pycache__/*
 Data/*
 Code/official-cpe-dictionary_v2.3.xml
 Code/debian-list.txt
+patchesdir/*
+prospector/prospector.log*
+prospector/reports/*
+prospector/cli/__pycache__/*
+prospector/filtering/__pycache__/*
+prospector/git/__pycache__/*
+prospector/core/__pycache__/*
+prospector/datamodel/__pycache__/*
+prospector/log/__pycache__/*
+prospector/rules/__pycache__/*
+prospector/stats/__pycache__/*
+prospector/util/__pycache__/*
+temp.dump
