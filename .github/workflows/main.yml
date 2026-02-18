@@ -1,0 +1,77 @@
+name: Extract and Upload Patches
+on:
+  push:
+    paths:
+      - 'Data/json' # Triggered only when this specific file is updated
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: patch_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Initialize Database Schema
+        env:
+          PGPASSWORD: password
+        run: |
+          # The path to your schema file in the repo
+          psql -h localhost -U user -d patch_db -f db/schema.sql
+
+      - name: Run Extraction Tool
+        env:
+          DB_URL: "postgres://user:password@localhost:5432/patch_db?sslmode=disable"
+        run: |
+          chmod +x run.sh
+          # Pass the specific path to your tool
+          ./run.sh Data/json
+          
+          # Run your TS extraction script
+          chmod +x extract_ts.sh
+          ./extract_ts.sh 
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload TS Files to S3
+        run: |
+          # Upload only .ts files to your S3 bucket
+          aws s3 cp ./output_folder/ s3://your-bucket-name/patches/ --recursive --exclude "*" --include "*.ts"
+
+      - name: Cleanup and Reset Repo
+        run: |
+          # Clear the JSON content so it's ready for next time
+          # We use '>' to empty the file instead of 'rm' to keep the path structure
+          > Data/json
+          
+          # Clean up any generated results in the runner
+          rm -rf output_folder/*
+          
+          # Commit the empty file back to the repo
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add Data/json
+          git commit -m "Cleanup: Data/json reset for next run" || echo "Nothing to commit"
+          git push
