@@ -276,7 +276,6 @@ def import_cves():
     
     
     
-    
     # ---------------------------------------------------------------------------------------------------------------------
     # Processing only the current year CVE records for the simplified example.
     
