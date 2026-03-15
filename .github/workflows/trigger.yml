@@ -1,0 +1,36 @@
+name: NVD to MoreFixes Pipeline
+on:
+  schedule:
+    - cron: '0 */12 * * *' # Run twice a day
+  workflow_dispatch:
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive' # MoreFixes often requires submodules (Prospector)
+          lfs: true # Crucial for 1GB files
+
+      - name: Start MoreFixes Services
+        run: |
+          docker-compose up -d
+          # Wait for PostgreSQL/MoreFixes to be healthy
+          sleep 30 
+
+      - name: Sync NVD & Run MoreFixes
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # 1. Fetch latest vulnerabilities (python script)
+          # 2. Extract patches using MoreFixes logic
+          # 3. Upload to Supabase
+          python3 ./scripts/pipeline_orchestrator.py
+
+      - name: Shutdown Services
+        if: always()
+        run: docker-compose down -v
