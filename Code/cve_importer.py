@@ -221,7 +221,7 @@ def import_cves():
     conn.commit()
 
     cf.logger.info('-' * 70)
-    for year in range(2024, 2025):
+    for year in range(2025, 2026):
         # /home/anupa/Desktop/FYP/Morefixes/Data/nvdcve-2.0-2022.json.zip
         extract_target = 'nvdcve-2.0-' + str(year) + '.json'
         # the database start since 2002
@@ -271,6 +271,8 @@ def import_cves():
             cf.logger.info('-' * 70)
 
             assign_cwes_to_cves(df_cve=df_cve)
+    
+    
     
     
     

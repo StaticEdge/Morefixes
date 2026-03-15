@@ -19,3 +19,4 @@ prospector/rules/__pycache__/*
 prospector/stats/__pycache__/*
 prospector/util/__pycache__/*
 temp.dump
+tests/__pycache__/conftest.cpython-310-pytest-7.4.0.pyc

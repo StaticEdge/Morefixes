@@ -11,12 +11,18 @@ services:
       POSTGRES_USER: postgrescvedumper
       POSTGRES_PASSWORD: a42a18537d74c3b7e584c769152c3d
       POSTGRES_DB: postgrescvedumper
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgrescvedumper"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     ports:
       # Maps Host Port 5433 -> Container Port 5432
       # This allows you to connect from your Mac using localhost:5433
       - "5433:5432"
     volumes:
       - postgres_data2:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
 
   # 2. The Python App Service
   app:
@@ -25,7 +31,8 @@ services:
       dockerfile: Dockerfile
     container_name: morefixes_app
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - ./:/app  # Syncs your code for live updates
     command: ["bash", "/app/Code/run.sh"]
