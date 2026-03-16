@@ -16,7 +16,7 @@ jobs:
 
       - name: Start MoreFixes Services
         run: |
-          docker-compose up -d
+          docker compose up -d
           # Wait for PostgreSQL/MoreFixes to be healthy
           sleep 30 
 
