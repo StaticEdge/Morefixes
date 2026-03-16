@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '0 */12 * * *' # Run twice a day
   workflow_dispatch:
+    inputs:
+      debug_mode:
+        description: 'Run in debug mode?'
+        required: false
+        default: 'false'
 
 jobs:
   run-pipeline:
@@ -33,4 +38,4 @@ jobs:
 
       - name: Shutdown Services
         if: always()
-        run: docker-compose down -v
+        run: docker compose down -v
