@@ -3,6 +3,12 @@ logger() {
     echo "[*] $(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
 
+# Create required directory
+mkdir -p /app/patchesdir/cvedataset-patches
+
+# (optional) print for debug
+logger "Created patches directory"
+
 logger "Updating Github security advisory database"
 git -C ./Code/resources/advisory-database pull
 

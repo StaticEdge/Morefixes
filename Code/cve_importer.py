@@ -16,6 +16,7 @@ from pandas import json_normalize
 
 from constants import URL_HEAD, URL_TAIL, INIT_YEAR, ORDERED_CVE_COLUMNS, CWE_COLUMNS, DROP_CVE_COLUMNS
 from extract_cwe_record import get_cwe_class, extract_cwe
+from process_and_upload import fetch_latest_cves
 import configuration as cf
 import database as db
 from database import create_session
@@ -221,56 +222,92 @@ def import_cves():
     conn.commit()
 
     cf.logger.info('-' * 70)
-    for year in range(2025, 2026):
-        # /home/anupa/Desktop/FYP/Morefixes/Data/nvdcve-2.0-2022.json.zip
-        extract_target = 'nvdcve-2.0-' + str(year) + '.json'
-        # the database start since 2002
-        zip_file_url = URL_HEAD + str(year) + URL_TAIL
-        # https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-2000.json.zip
+    cf.logger.warning(f'Extract vulnerabilities from NVD database')
 
-        # Check if the directory already has the json file or not ?
-        # For now, never reuse the files to get new updates.
-        if False:  # os.path.isfile(Path(cf.DATA_PATH) / 'json' / extract_target) and year != currentYear:
-            cf.logger.warning(f'Reusing the {year} CVE json file that was downloaded earlier...')
-            json_file = Path(cf.DATA_PATH) / 'json' / extract_target
-            # json_file = "Data/json/hi.json" #TODO: change this 
-            # json_file = "Data/json/nvdcve-2.0-2025.json"
-        else:
-            # Prefer a locally downloaded zip file in the DATA_PATH (faster, offline).
-            zip_filename = f"nvdcve-2.0-{year}.json.zip"
-            zip_path = Path(cf.DATA_PATH) / zip_filename
+    recent_data = fetch_latest_cves()
 
-            if zip_path.is_file():
-                # Open the local zip file from disk
-                z = ZipFile(str(zip_path))
-                json_file = z.extract(extract_target, Path(cf.DATA_PATH) / 'json')
-            else:
-                # Fallback to downloading from NVD if local zip is not available
-                # url_to_open = urlopen(zip_file_url, timeout=10)
-                r = requests.get(zip_file_url)
-                z = ZipFile(BytesIO(r.content))  # BytesIO keeps the file in memory
-                json_file = z.extract(extract_target, Path(cf.DATA_PATH) / 'json')
+    # Ensure the data has v1-like structure before creating DataFrame
+    recent_data = _ensure_v1_like_structure(recent_data)
+    df_cve = pd.DataFrame(recent_data)
 
-        with open(json_file) as f:
-            yearly_data = json.load(f)
-            # if year == INIT_YEAR:  # initialize the df_methods by the first year data
-            cf.logger.info(f'The CVE json for {year} has been merged')
+    df_cve = preprocess_jsons(df_cve)
+    df_cve = df_cve.apply(lambda x: x.astype(str))
+    assert df_cve['cve_id'].is_unique, 'Primary keys are not unique in cve records!'
+    df_cve.to_sql(name="cve", con=conn, if_exists="append", index=False)
+    conn.commit()
+    cf.logger.info('-' * 70)
 
-            # Ensure the data has v1-like structure before creating DataFrame
-            yearly_data = _ensure_v1_like_structure(yearly_data)
-            df_cve = pd.DataFrame(yearly_data)
-            # else:
-            #     df_cve = pd.concat([df_cve, pd.DataFrame(yearly_data)], ignore_index=True)
+    assign_cwes_to_cves(df_cve=df_cve)
 
-            df_cve = preprocess_jsons(df_cve)
-            df_cve = df_cve.apply(lambda x: x.astype(str))
-            assert df_cve['cve_id'].is_unique, 'Primary keys are not unique in cve records!'
-            df_cve.to_sql(name="cve", con=conn, if_exists="append", index=False)
-            conn.commit()
-            cf.logger.info(f'All CVEs for year {year} have been merged into the cve table')
-            cf.logger.info('-' * 70)
+# def import_cves():
+#     """
+#     gathering CVE records by processing JSON files.
+#     """
+#     for tbl in ['cve', 'cwe', 'cwe_classification']:
+#         if db.table_exists(tbl):
+#             db.exec_query(f'DROP TABLE {tbl};')
 
-            assign_cwes_to_cves(df_cve=df_cve)
+#     # Create CWE table
+#     df_cwes = extract_cwe()
+
+#     # Applying the assertion to cve-, cwe- and cwe_classification table.
+#     assert df_cwes.cwe_id.is_unique, "Primary keys are not unique in cwe records!"
+
+#     df_cwes = df_cwes[CWE_COLUMNS].reset_index()  # to maintain the order of the columns
+#     df_cwes.to_sql(name="cwe", con=conn, if_exists='replace', index=False)
+#     conn.commit()
+
+#     cf.logger.info('-' * 70)
+#     for year in range(2025, 2026):
+#         # /home/anupa/Desktop/FYP/Morefixes/Data/nvdcve-2.0-2022.json.zip
+#         extract_target = 'nvdcve-2.0-' + str(year) + '.json'
+#         # the database start since 2002
+#         zip_file_url = URL_HEAD + str(year) + URL_TAIL
+#         # https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-2000.json.zip
+
+#         # Check if the directory already has the json file or not ?
+#         # For now, never reuse the files to get new updates.
+#         if True:  # os.path.isfile(Path(cf.DATA_PATH) / 'json' / extract_target) and year != currentYear:
+#             cf.logger.warning(f'Reusing the {year} CVE json file that was downloaded earlier...')
+#             # json_file = Path(cf.DATA_PATH) / 'json' / extract_target
+#             json_file = "Data/json/hi.json" #TODO: change this 
+#             # json_file = "Data/json/nvdcve-2.0-2025.json"
+#         else:
+#             # Prefer a locally downloaded zip file in the DATA_PATH (faster, offline).
+#             zip_filename = f"nvdcve-2.0-{year}.json.zip"
+#             zip_path = Path(cf.DATA_PATH) / zip_filename
+
+#             if zip_path.is_file():
+#                 # Open the local zip file from disk
+#                 z = ZipFile(str(zip_path))
+#                 json_file = z.extract(extract_target, Path(cf.DATA_PATH) / 'json')
+#             else:
+#                 # Fallback to downloading from NVD if local zip is not available
+#                 # url_to_open = urlopen(zip_file_url, timeout=10)
+#                 r = requests.get(zip_file_url)
+#                 z = ZipFile(BytesIO(r.content))  # BytesIO keeps the file in memory
+#                 json_file = z.extract(extract_target, Path(cf.DATA_PATH) / 'json')
+
+#         with open(json_file) as f:
+#             yearly_data = json.load(f)
+#             # if year == INIT_YEAR:  # initialize the df_methods by the first year data
+#             cf.logger.info(f'The CVE json for {year} has been merged')
+
+#             # Ensure the data has v1-like structure before creating DataFrame
+#             yearly_data = _ensure_v1_like_structure(yearly_data)
+#             df_cve = pd.DataFrame(yearly_data)
+#             # else:
+#             #     df_cve = pd.concat([df_cve, pd.DataFrame(yearly_data)], ignore_index=True)
+
+#             df_cve = preprocess_jsons(df_cve)
+#             df_cve = df_cve.apply(lambda x: x.astype(str))
+#             assert df_cve['cve_id'].is_unique, 'Primary keys are not unique in cve records!'
+#             df_cve.to_sql(name="cve", con=conn, if_exists="append", index=False)
+#             conn.commit()
+#             cf.logger.info(f'All CVEs for year {year} have been merged into the cve table')
+#             cf.logger.info('-' * 70)
+
+#             assign_cwes_to_cves(df_cve=df_cve)
     
     
     

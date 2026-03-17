@@ -16,6 +16,7 @@ import cve_importer
 import database as db
 from Code.cpe_parser import parse_cpe_dict
 from Code.registry_to_github import clean_git_url
+from Code.process_and_upload import upload_patches_to_s3
 from Code.resources.cpe_to_github_search import search_missing_cpes_in_github
 from Code.resources.cveprojectdatabase import create_cve_mapper_table
 from Code.resources.dynamic_commit_collector import add_missing_commits, execute_command, remove_all_directories, \
@@ -584,5 +585,7 @@ if __name__ == '__main__':
     #     cf.logger.warning('Data pruning is not possible because there is no information in method_change table')
     add_missing_patches()
     cf.logger.info('The database is up-to-date.')
+    upload_patches_to_s3()
+    cf.logger.info('The patches are uploaded to Supabase.')
     cf.logger.info('-' * 70)
 # ---------------------------------------------------------------------------------------------------------------------

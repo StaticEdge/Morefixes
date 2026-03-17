@@ -159,3 +159,5 @@ websocket-client==1.6.1
 Werkzeug==2.3.6
 widgetsnbextension==4.0.8
 wrapt==1.15.0
+boto3==1.42.69
+botocore==1.42.69
