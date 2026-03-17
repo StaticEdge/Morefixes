@@ -23,7 +23,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Download the specific file from your release
-          gh release download v0.0.1-data --pattern 'official-cpe-dictionary_v2.3.xml.zip'
+          gh release download zip --pattern 'official-cpe-dictionary_v2.3.xml.zip'
           
           # Unzip and prepare for Docker
           unzip official-cpe-dictionary_v2.3.xml.zip
