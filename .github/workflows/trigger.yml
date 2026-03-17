@@ -18,16 +18,16 @@ jobs:
         with:
           submodules: 'recursive' # MoreFixes often requires submodules (Prospector)
           
-      - name: Download NVD CPE Dictionary
+      - name: Download Data from GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p ./data_temp
-          # Download the zipped dictionary from NIST
-          curl -L https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip -o ./data_temp/cpe.zip
-          # Unzip it
-          unzip ./data_temp/cpe.zip -d ./data_temp
-          # Move it to the location you will mount to Docker
-          mv ./data_temp/official-cpe-dictionary_v2.3.xml ./official-cpe-dictionary_v2.3.xml
-          echo "CPE Dictionary downloaded successfully."
+          # Download the specific file from your release
+          gh release download v0.0.1-data --pattern 'official-cpe-dictionary_v2.3.xml.zip'
+          
+          # Unzip and prepare for Docker
+          unzip official-cpe-dictionary_v2.3.xml.zip
+          echo "File ready for mounting."
 
       - name: Start MoreFixes Services
         run: |
