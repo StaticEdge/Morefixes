@@ -27,9 +27,9 @@ def save_vulnerabilities_to_file(data, folder="Data/json"):
     return filepath
 
 def fetch_latest_cves():
-    # Calculate time range (last 6 hours)
+    # Calculate time range (last 12 hours)
     end_date = datetime.utcnow()
-    start_date = end_date - timedelta(hours=6)
+    start_date = end_date - timedelta(hours=12)
     
     url = "https://services.nvd.nist.gov/rest/json/cves/2.0/"
     params = {
