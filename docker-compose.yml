@@ -34,6 +34,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
+      - ./official-cpe-dictionary_v2.3.xml:/app/Code/official-cpe-dictionary_v2.3.xml:ro
       - ./:/app  # Syncs your code for live updates
     command: ["bash", "/app/Code/run.sh"]
     environment:
