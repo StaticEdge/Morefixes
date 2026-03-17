@@ -25,17 +25,6 @@ jobs:
           # Wait for PostgreSQL/MoreFixes to be healthy
           sleep 30 
 
-      - name: Sync NVD & Run MoreFixes
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          # 1. Fetch latest vulnerabilities (python script)
-          # 2. Extract patches using MoreFixes logic
-          # 3. Upload to Supabase
-          python3 ./scripts/pipeline_orchestrator.py
-
       - name: Shutdown Services
         if: always()
         run: docker compose down -v
