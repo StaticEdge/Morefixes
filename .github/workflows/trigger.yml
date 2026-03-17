@@ -17,7 +17,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: 'recursive' # MoreFixes often requires submodules (Prospector)
-          lfs: true # Crucial for 1GB files
+          
+      - name: Download NVD CPE Dictionary
+        run: |
+          mkdir -p ./data_temp
+          # Download the zipped dictionary from NIST
+          curl -L https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip -o ./data_temp/cpe.zip
+          # Unzip it
+          unzip ./data_temp/cpe.zip -d ./data_temp
+          # Move it to the location you will mount to Docker
+          mv ./data_temp/official-cpe-dictionary_v2.3.xml ./official-cpe-dictionary_v2.3.xml
+          echo "CPE Dictionary downloaded successfully."
 
       - name: Start MoreFixes Services
         run: |
