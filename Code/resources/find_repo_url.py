@@ -143,7 +143,7 @@ def apply_cve_cpe_mappers():
     session = create_session()
     conn = session.connection()
     # make table mapper for all nisd data set  base on cve_id nad cpe_names
-    # cve_cpe_table() #commented for now
+    cve_cpe_table()
 
     # find cve id for cpe_name in cpe_project
     match_cpe_name_to_cve_id()
