@@ -55,12 +55,12 @@ def fetch_latest_cves():
 
 def upload_patches_to_s3():
     """
-    Finds .patch files in PATCH_FILE_STORAGE_PATH and uploads them 
+    Finds .patch files in OUTPUT_FOLDER and uploads them 
     to an S3 bucket (Supabase storage bucket or AWS S3).
     Implements rate-limiting and exponential backoff for retries.
     """
     
-    patch_dir = os.getenv("PATCH_FILE_STORAGE_PATH")
+    patch_dir = os.getenv("OUTPUT_FOLDER")
     s3_endpoint = os.getenv("SUPABASE_URL")  # e.g., https://xyz.supabase.co/storage/v1
     aws_access_key_id = os.getenv("SUPABASE_KEY_ID")
     aws_secret_access_key = os.getenv("SUPABASE_KEY")
@@ -68,7 +68,7 @@ def upload_patches_to_s3():
     
     if not all([patch_dir, s3_endpoint, aws_access_key_id, aws_secret_access_key]):
         print("Missing required environment variables.")
-        print("Please ensure PATCH_FILE_STORAGE_PATH, SUPABASE_URL, SUPABASE_KEY_ID, and SUPABASE_KEY are set.")
+        print("Please ensure OUTPUT_FOLDER, SUPABASE_URL, SUPABASE_KEY_ID, and SUPABASE_KEY are set.")
         return
 
     if not os.path.exists(patch_dir):
