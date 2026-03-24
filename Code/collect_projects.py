@@ -23,6 +23,7 @@ from Code.resources.dynamic_commit_collector import add_missing_commits, execute
     is_repo_available, PROJECT_STATUS_REPO_REMOVED
 from Code.resources.extract_github_repo_from_ghsd import parse_and_append_ghsd_dataset
 from Code.file_filter import extract_js_ts_patches
+from Code.description_generator import generate_descriptions
 from resources.find_repo_url import apply_cve_cpe_mappers
 from database import create_session
 from collect_commits import extract_commits, extract_project_links, download_patch
@@ -590,5 +591,7 @@ if __name__ == '__main__':
     cf.logger.info('The JS/TS patches are extracted.')
     upload_patches_to_s3()
     cf.logger.info('The patches are uploaded to Supabase.')
+    generate_descriptions()
+    cf.logger.info('The descriptions are generated.')
     cf.logger.info('-' * 70)
 # ---------------------------------------------------------------------------------------------------------------------
