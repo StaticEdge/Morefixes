@@ -12,6 +12,7 @@ load_dotenv()
 
 # ---------------- CONFIG ----------------
 PATCH_DIR = os.getenv("OUTPUT_FOLDER")
+PATCH_FILE_METADATA_PATH = os.getenv("PATCH_FILE_METADATA_PATH", "/pool0/data/user/metadata")
 
 MODEL_NAME = "gemini-2.0-flash"
 SLEEP_SECONDS = 1
@@ -24,7 +25,9 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel(MODEL_NAME)
 
 
-def analyze_diff_gemini(file_path: str, diff_content: str):
+def analyze_diff_gemini(file_path: str, diff_content: str, cve_id: str | None = None, cwe_ids: list | None = None):
+    cve_id_hint = cve_id if cve_id else "unknown — infer from context if possible"
+    cwe_ids_hint = json.dumps(cwe_ids) if cwe_ids else "not provided — infer from vulnerability_type and diff"
     prompt = f"""
 You are a security researcher analyzing vulnerable code changes for dataset construction.
 
@@ -97,7 +100,18 @@ SELECTION GUIDELINES:
 - is_vulnerability_fix: true if the patch mitigates or fixes a vulnerability.
 - can_semgrep_catch_by_custom_rule: true if a static pattern-based Semgrep rule could reasonably detect this issue.
 - runtime_or_compiletime: Use "runtime" or "compiletime".
+- cve_id: The CVE identifier for this vulnerability (e.g. "CVE-2024-1234").
+  Use the value provided below if available, otherwise output null.
+- cwe_ids: A JSON array of CWE identifiers (e.g. ["CWE-79", "CWE-116"]).
+  Use the values provided below if available.
+  If NOT provided or empty, INFER the most applicable CWE ID(s) from the
+  vulnerability_type and the diff (1–3 CWEs maximum, most specific first).
+  Output an empty array [] ONLY if you truly cannot determine any CWE.
 
+--------------------------------------------------
+KNOWN IDENTIFIERS (from patch metadata — use as-is if present):
+  cve_id  : {cve_id_hint}
+  cwe_ids : {cwe_ids_hint}
 --------------------------------------------------
 --------------------------------------------------
 OUTPUT REQUIREMENTS:
@@ -116,6 +130,8 @@ Do NOT include analysis, reasoning, or intermediate classifications.
   "can_semgrep_catch_by_custom_rule": <true|false>,
   "runtime_or_compiletime": "<runtime|compiletime>",
   "description": "<5–6 sentence abstract describing the vulnerable logic pattern>",
+  "cve_id": "<CVE-YYYY-NNNNN or null>",
+  "cwe_ids": ["<CWE-NNN>", "..."],
   "name": "{file_path}"
 }}
 --------------------------------------------------
@@ -135,7 +151,13 @@ Diff:
             }
         )
 
-        return json.loads(response.text)
+        result = json.loads(response.text)
+        # If Gemini left cve_id/cwe_ids blank but we have them from metadata, override
+        if cve_id and not result.get("cve_id"):
+            result["cve_id"] = cve_id
+        if cwe_ids and not result.get("cwe_ids"):
+            result["cwe_ids"] = cwe_ids
+        return result
 
     except Exception as e:
         # # 🔴 Break condition
@@ -160,6 +182,38 @@ def load_single_patch(patch_dir, filename):
     except Exception as e:
         print(f"Error reading {filename}: {e}")
         return None
+
+
+def load_patch_metadata(metadata_dir: str) -> dict:
+    """
+    Loads patch_metadata.json from the given directory and returns a dict
+    keyed by patchfile_name for O(1) lookups.
+
+    Handles cases where 'cwe' may be null or an empty list (known generation bug).
+    Returns an empty dict if the file is missing or malformed.
+    """
+    metadata_path = os.path.join(metadata_dir, "patch_metadata.json")
+    if not os.path.exists(metadata_path):
+        print(f"⚠️  patch_metadata.json not found at {metadata_path}. CWE/CVE fields will be empty.")
+        return {}
+    try:
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        # Build lookup dict; guard against null/missing cwe (known generation bug)
+        lookup = {}
+        for entry in raw:
+            name = entry.get("patchfile_name", "")
+            if name:
+                lookup[name] = {
+                    "cve_id": entry.get("cve_id") or None,
+                    # cwe may be null or [] due to a bug in the metadata generation script
+                    "cwe_ids": entry.get("cwe") or [],
+                }
+        print(f"✅ Loaded patch_metadata.json: {len(lookup)} entries.")
+        return lookup
+    except Exception as e:
+        print(f"⚠️  Failed to load patch_metadata.json: {e}. CWE/CVE fields will be empty.")
+        return {}
 
 
 # ---------- Supabase Upload ----------
@@ -227,9 +281,13 @@ def upload_json_to_supabase(data: list):
 # ---------- Main Pipeline ----------
 def generate_descriptions():
     print(f"Using patch directory: {PATCH_DIR}")
+    print(f"Using metadata directory: {PATCH_FILE_METADATA_PATH}")
     print("Scanning for patch files...")
     patch_files = get_patch_files_list(PATCH_DIR)
     print(f"Found {len(patch_files)} patch files.\n")
+
+    # Load patch metadata once (cve_id + cwe_ids per patch filename)
+    patch_metadata = load_patch_metadata(PATCH_FILE_METADATA_PATH)
 
     results = []
 
@@ -240,9 +298,22 @@ def generate_descriptions():
         if not diff_content:
             continue
 
-        analysis = analyze_diff_gemini(filename, diff_content)
+        # Pass known CVE/CWE hints into Gemini so it can use or infer them
+        meta = patch_metadata.get(filename, {})
+        known_cve = meta.get("cve_id") or None
+        known_cwes = meta.get("cwe_ids") or []
+
+        analysis = analyze_diff_gemini(filename, diff_content, cve_id=known_cve, cwe_ids=known_cwes)
 
         if analysis:
+            if not analysis.get("cve_id"):
+                print(f"  ⚠️  No CVE ID found or inferred for {filename}")
+            if not analysis.get("cwe_ids"):
+                print(f"  ⚠️  CWE IDs missing or could not be inferred for {filename}")
+            else:
+                src = "metadata" if known_cwes else "inferred by Gemini"
+                print(f"  ✅  CWE IDs ({src}): {analysis['cwe_ids']}")
+
             results.append(analysis)
 
         time.sleep(SLEEP_SECONDS)

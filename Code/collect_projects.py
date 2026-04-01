@@ -340,6 +340,52 @@ def clone_memo_repo(repo_url):
     return cached_repo_path
 
 
+def generate_patch_metadata_json():
+    """
+    Generates a JSON file containing the patchfile name, CVE ID, and CWE ID.
+    """
+    session = create_session()
+    conn = session.connection()
+    try:
+        query = """
+            SELECT f.cve_id, f.hash, f.repo_url, c.cwe_id
+            FROM fixes f
+            LEFT JOIN cwe_classification c ON f.cve_id = c.cve_id
+        """
+        df = pd.read_sql(query, con=conn)
+        
+        df['repo_url'] = df['repo_url'].fillna('')
+        df['hash'] = df['hash'].fillna('')
+        df['cve_id'] = df['cve_id'].fillna('')
+        
+        records = []
+        grouped = df.groupby(['cve_id', 'hash', 'repo_url'])
+        
+        for (cve_id, single_hash, repo_url), group in grouped:
+            cwe_list = group['cwe_id'].dropna().unique().tolist()
+            cwe_list = [str(c) for c in cwe_list]
+            
+            repo_name = (str(repo_url).lstrip('https://')).replace('/', '_')
+            patchfile_name = f"{repo_name}_{single_hash}.patch"
+            
+            records.append({
+                'patchfile_name': patchfile_name,
+                'cve_id': str(cve_id),
+                'cwe': cwe_list
+            })
+            
+        output_path = os.path.join(cf.PATCH_FILE_METADATA_PATH, 'patch_metadata.json')
+        import json
+        with open(output_path, 'w') as f:
+            json.dump(records, f, indent=4)
+            
+        cf.logger.info(f"Generated patch metadata JSON at {output_path}")
+    except Exception as e:
+        cf.logger.error(f"Failed to generate patch metadata JSON: {e}")
+    finally:
+        conn.close()
+        session.close()
+
 def remove_directory(directory_path):
     try:
         shutil.rmtree(directory_path)
@@ -529,6 +575,8 @@ def fetch_and_store_commits():
         cf.logger.warning('The method_change table does not exist')
 
     cf.logger.info('-' * 70)
+    
+    generate_patch_metadata_json()
 
 
 # ---------------------------------------------------------------------------------------------------------------------
