@@ -1,3 +1,6 @@
 [submodule "Code/resources/advisory-database"]
 	path = Code/resources/advisory-database
 	url = https://github.com/github/advisory-database.git
+[submodule "sast_rule_agent_temp"]
+	path = sast_rule_agent_temp
+	url = git@github.com:StaticEdge/sast_rule_agent_temp.git
