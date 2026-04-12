@@ -24,6 +24,7 @@ from Code.resources.dynamic_commit_collector import add_missing_commits, execute
 from Code.resources.extract_github_repo_from_ghsd import parse_and_append_ghsd_dataset
 from Code.file_filter import extract_js_ts_patches
 from Code.description_generator import generate_descriptions
+from Code.process_and_upload import run_semgrep_rule_generation
 from resources.find_repo_url import apply_cve_cpe_mappers
 from database import create_session
 from collect_commits import extract_commits, extract_project_links, download_patch
@@ -548,7 +549,10 @@ def fetch_and_store_commits():
             print(f'Problem occurred while retrieving the project: {repo_url}: {e}')
             # pass  # skip fetching repository if is not available.
         finally:
-            remove_directory(repo_path)
+            # NOTE: Keeping cloned repos for semgrep rule generation step.
+            # Cleanup happens after rule generation in run_semgrep_rule_generation().
+            # remove_directory(repo_path)
+            pass
         conn.commit()
     cf.logger.debug('-' * 70)
 
@@ -641,5 +645,8 @@ if __name__ == '__main__':
     cf.logger.info('The patches are uploaded to Supabase.')
     generate_descriptions()
     cf.logger.info('The descriptions are generated.')
+
+    run_semgrep_rule_generation()
+    cf.logger.info('Semgrep rules generated and pushed to ts-rules.')
     cf.logger.info('-' * 70)
 # ---------------------------------------------------------------------------------------------------------------------

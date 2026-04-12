@@ -23,3 +23,9 @@ tests/__pycache__/conftest.cpython-310-pytest-7.4.0.pyc
 
 Code/official-cpe-dictionary_v2.3.xml.zip
 
+# Rule generation temp files
+tmp/
+sast_rule_agent_temp/venv/
+sast_rule_agent_temp/__pycache__/
+sast_rule_agent_temp/logs/
+sast_rule_agent_temp/.env
