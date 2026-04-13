@@ -455,7 +455,7 @@ def fetch_and_store_commits():
             # extract_commits method returns data at different granularity levels
             repo_path = repo_cache_dict.get(repo_url, clone_memo_repo(repo_url))
             df_commit, df_file, df_method = extract_commits(repo_url, hashes, repo_path)
-            # remove_directory(repo_path)
+            remove_directory(repo_path)
             for single_hash in hashes:
                 repo_name = (repo_url.lstrip('https://')).replace('/', '_')
                 patch_path = os.path.join(cf.PATCH_FILE_STORAGE_PATH, f"{repo_name}_{single_hash}.patch")
@@ -551,7 +551,7 @@ def fetch_and_store_commits():
         finally:
             # NOTE: Keeping cloned repos for semgrep rule generation step.
             # Cleanup happens after rule generation in run_semgrep_rule_generation().
-            # remove_directory(repo_path)
+            remove_directory(repo_path)
             pass
         conn.commit()
     cf.logger.debug('-' * 70)
