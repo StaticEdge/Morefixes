@@ -10,7 +10,6 @@ import pandas as pd
 import requests
 
 import configuration as cf
-from guesslang import Guess
 from pydriller import Repository
 
 from Code.resources.dynamic_commit_collector import execute_command
@@ -102,17 +101,13 @@ def extract_project_links(df_cve_table: pd.DataFrame):
     return df_fixes, df_git_cve_refs
 
 
-Guess_instance = Guess()
 
 
 def guess_pl(code):
     """
     :returns guessed programming language of the code
     """
-    if code:
-        return Guess_instance.language_name(code.strip())
-    else:
-        return 'unknown'
+    return 'unknown'
 
 
 def get_method_code(source_code, start_line, end_line):

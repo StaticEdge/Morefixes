@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # 1. The Database Service (Your existing config)
   postgres:
@@ -20,7 +18,6 @@ services:
       - "5433:5432"
     volumes:
       - ./migrations:/docker-entrypoint-initdb.d
-      - postgres_data:/var/lib/postgresql/data
 
   # 2. The Python App Service
   app:
@@ -40,6 +37,3 @@ services:
       POSTGRES_USER: postgrescvedumper
       POSTGRES_PASSWORD: a42a18537d74c3b7e584c769152c3d
       POSTGRES_DB: postgrescvedumper
-
-volumes:
-  postgres_data:

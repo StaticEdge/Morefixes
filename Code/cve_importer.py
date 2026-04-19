@@ -53,6 +53,7 @@ def _ensure_v1_like_structure(root_json: dict) -> dict:
     # If v2-style
     if 'vulnerabilities' in root_json:
         v2_list = root_json.get('vulnerabilities', [])
+        print(f"Number of vulnerabilities: {len(v2_list)}")
         cve_items = []
         for wrapper in v2_list:
             cve_item = wrapper.get('cve', {})

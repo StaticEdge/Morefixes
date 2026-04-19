@@ -10,6 +10,8 @@ import requests
 import github
 from sqlalchemy import text
 from tqdm import tqdm
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 import configuration as cf
 import cve_importer
@@ -77,7 +79,7 @@ CREATE INDEX IF NOT EXISTS cve_id_index ON fixes (cve_id);
 
 def extract_location_header(url):
     try:
-        response = requests.get(url, allow_redirects=False)
+        response = requests.get(url, allow_redirects=False, verify=False)
         response.raise_for_status()  # Raise an exception if the response status code indicates an error
 
         location_header = response.headers.get('location')
@@ -141,11 +143,11 @@ def find_unavailable_urls(urls):
             # Handle rate limiting, if necessary
             sleeptime += 10
             time.sleep(sleeptime)
-            response = requests.head(url)
+            response = requests.head(url, verify=False)
         elif response is None or (response.status_code >= 400) or (
                 response.is_redirect and response.headers['location'] == 'https://gitlab.com/users/sign_in'):
             # Send the initial HEAD request
-            response = requests.head(url)
+            response = requests.head(url, verify=False)
 
         # Continue with the rest of your logic
         if (response.status_code >= 400) or (
@@ -609,7 +611,7 @@ if __name__ == '__main__':
     print('Parsing & Adding GHSD dataset')
 
     # Parse & append GHSD dataset
-    parse_and_append_ghsd_dataset()
+    # parse_and_append_ghsd_dataset()
 
     # Step (2.2) Find any CVE that have no Github fix using CPE
     # Parse official CPE dictionary
@@ -623,7 +625,7 @@ if __name__ == '__main__':
     # cf.logger.info(f'Time elapsed to pull the data {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} (hh:mm:ss).')
 
     # Step (2.3) Run prospector on cve_project table, to find out all fixing commits.
-    add_missing_commits()
+    # add_missing_commits()
 
     # remove_lowscore_fixes(cf.MINIMUM_COMMIT_SCORE)
     # Step (3) save commit-, file-, and method- level data tables to the database

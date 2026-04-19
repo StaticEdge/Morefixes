@@ -11,6 +11,8 @@ import psutil
 from sqlalchemy import text
 from pathlib import Path
 import multiprocessing as mp
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 import Code.configuration as cf
 
@@ -47,7 +49,7 @@ def is_repo_available(url):
         # Send an HTTP GET request to the repository's web page
         response = requests.get(url, headers={
             'Authorization': f'Bearer {TOKEN}'
-        })
+        }, verify=False)
         # Check if the request was successful
         # What if it's renamed?
         if response.status_code == 200:

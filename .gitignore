@@ -1,6 +1,7 @@
 Code/__pycache__/*
 prospector/venv/*
 venv/*
+.venv/*
 Code/resources/__pycache__/*
 .DS_Store
 Data/*
@@ -29,3 +30,5 @@ sast_rule_agent_temp/venv/
 sast_rule_agent_temp/__pycache__/
 sast_rule_agent_temp/logs/
 sast_rule_agent_temp/.env
+
+.env

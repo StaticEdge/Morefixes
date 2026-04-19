@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 import google.generativeai as genai
 import json
 import time
@@ -25,7 +26,7 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel(MODEL_NAME)
 
 
-def analyze_diff_gemini(file_path: str, diff_content: str, cve_id: str | None = None, cwe_ids: list | None = None):
+def analyze_diff_gemini(file_path: str, diff_content: str, cve_id: Optional[str] = None, cwe_ids: Optional[list] = None):
     cve_id_hint = cve_id if cve_id else "unknown — infer from context if possible"
     cwe_ids_hint = json.dumps(cwe_ids) if cwe_ids else "not provided — infer from vulnerability_type and diff"
     prompt = f"""
