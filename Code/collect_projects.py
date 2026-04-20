@@ -611,7 +611,7 @@ if __name__ == '__main__':
     print('Parsing & Adding GHSD dataset')
 
     # Parse & append GHSD dataset
-    # parse_and_append_ghsd_dataset()
+    parse_and_append_ghsd_dataset()
 
     # Step (2.2) Find any CVE that have no Github fix using CPE
     # Parse official CPE dictionary
@@ -625,7 +625,7 @@ if __name__ == '__main__':
     # cf.logger.info(f'Time elapsed to pull the data {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} (hh:mm:ss).')
 
     # Step (2.3) Run prospector on cve_project table, to find out all fixing commits.
-    # add_missing_commits()
+    add_missing_commits()
 
     # remove_lowscore_fixes(cf.MINIMUM_COMMIT_SCORE)
     # Step (3) save commit-, file-, and method- level data tables to the database

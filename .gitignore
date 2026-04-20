@@ -32,3 +32,5 @@ sast_rule_agent_temp/logs/
 sast_rule_agent_temp/.env
 
 .env
+
+Code/resources/advisory-database/advisories/*

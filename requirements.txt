@@ -1,6 +1,6 @@
 pandas==2.3.3
 requests==2.32.5
-github==1.2.7
+PyGithub
 SQLAlchemy==2.0.49
 tqdm==4.67.3
 python-dotenv==1.2.1

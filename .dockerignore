@@ -1,1 +1,9 @@
 Code/resources/advisory-database/advisories/*
+.git/
+venv/
+.venv/
+Data/
+tmp/
+postgrescvedumper-2024-09-26.sql/
+__pycache__/
+*.pyc

@@ -1,42 +1,114 @@
--- Extracted from prospector/ddl/20_users.sql
+-- =============================================================================
+-- MoreFixes Database Schema
+-- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- Users table (from prospector/ddl/20_users.sql)
+-- ---------------------------------------------------------------------------
 DROP TABLE IF EXISTS public.users;
 
 CREATE TABLE public.users (
-	id varchar(40) NOT NULL PRIMARY KEY,
-	hashed_password varchar(40) NOT NULL,
-	firstname varchar NOT NULL,
-	lastname varchar NULL,
-	photo varchar NULL,
-	account_created varchar NULL,
-	last_access varchar NULL
+    id varchar(40) NOT NULL PRIMARY KEY,
+    hashed_password varchar(40) NOT NULL,
+    firstname varchar NOT NULL,
+    lastname varchar NULL,
+    photo varchar NULL,
+    account_created varchar NULL,
+    last_access varchar NULL
 );
 
--- Extracted from prospector/ddl/10_commit.sql
+-- ---------------------------------------------------------------------------
+-- Commits table (matches collect_projects.py INSERT and constants.py COMMIT_COLUMNS)
+-- ---------------------------------------------------------------------------
 DROP TABLE IF EXISTS public.commits;
 
 CREATE TABLE public.commits (
-	commit_id varchar(40) NOT NULL,
-	repository varchar NOT NULL,
-	timestamp int,
-	-- preprocessed data
-	hunks int,
-	message varchar NULL,
-	diff varchar[] NULL,
-	changed_files varchar[] NULL,
-	message_reference_content varchar[] NULL,
-	jira_refs jsonb NULL,
-	ghissue_refs jsonb NULL,
-	cve_refs varchar[] NULL,
-	tags varchar[] NULL,
-	minhash varchar NULL,
-	CONSTRAINT commits_pkey PRIMARY KEY (commit_id, repository)
+    hash varchar(40) NOT NULL,
+    repo_url varchar NOT NULL,
+    author varchar NULL,
+    author_date timestamptz NULL,
+    author_timezone int NULL,
+    committer varchar NULL,
+    committer_date timestamptz NULL,
+    committer_timezone int NULL,
+    msg text NULL,
+    merge boolean NULL,
+    parents text[] NULL,
+    num_lines_added int NULL,
+    num_lines_deleted int NULL,
+    dmm_unit_complexity float NULL,
+    dmm_unit_interfacing float NULL,
+    dmm_unit_size float NULL,
+    CONSTRAINT commits_pkey PRIMARY KEY (hash, repo_url)
 );
 
-CREATE INDEX IF NOT EXISTS commit_index ON public.commits USING btree (commit_id);
-CREATE UNIQUE INDEX IF NOT EXISTS commit_repository_index ON public.commits USING btree (commit_id, repository);
-CREATE INDEX IF NOT EXISTS repository_index ON public.commits USING btree (repository);
+CREATE INDEX IF NOT EXISTS commit_hash_index ON public.commits USING btree (hash);
+CREATE INDEX IF NOT EXISTS commit_repo_url_index ON public.commits USING btree (repo_url);
 
--- Extracted from Code/resources/cveprojectdatabase.py
+-- ---------------------------------------------------------------------------
+-- Repository table (matches constants.py REPO_COLUMNS and DataDictionary)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.repository (
+    repo_url varchar NOT NULL PRIMARY KEY,
+    repo_name varchar NULL,
+    description text NULL,
+    date_created timestamptz NULL,
+    date_last_push timestamptz NULL,
+    homepage varchar NULL,
+    repo_language varchar NULL,
+    owner varchar NULL,
+    forks_count int NULL,
+    stars_count int NULL
+);
+
+-- ---------------------------------------------------------------------------
+-- File change table (matches constants.py FILE_COLUMNS and collect_projects.py INSERT)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.file_change (
+    file_change_id bigint NOT NULL PRIMARY KEY,
+    hash varchar(40) NOT NULL,
+    filename varchar NULL,
+    old_path varchar NULL,
+    new_path varchar NULL,
+    change_type varchar NULL,
+    diff text NULL,
+    diff_parsed text NULL,
+    num_lines_added int NULL,
+    num_lines_deleted int NULL,
+    code_after text NULL,
+    code_before text NULL,
+    nloc int NULL,
+    complexity int NULL,
+    token_count int NULL,
+    programming_language varchar NULL
+);
+
+CREATE INDEX IF NOT EXISTS file_change_hash_index ON public.file_change USING btree (hash);
+
+-- ---------------------------------------------------------------------------
+-- Method change table (matches constants.py METHOD_COLUMNS and DataDictionary)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.method_change (
+    method_change_id bigint NOT NULL PRIMARY KEY,
+    file_change_id bigint NOT NULL,
+    name varchar NULL,
+    signature text NULL,
+    parameters text NULL,
+    start_line int NULL,
+    end_line int NULL,
+    code text NULL,
+    nloc int NULL,
+    complexity int NULL,
+    token_count int NULL,
+    top_nesting_level int NULL,
+    before_change varchar NULL
+);
+
+CREATE INDEX IF NOT EXISTS method_change_file_id_index ON public.method_change USING btree (file_change_id);
+
+-- ---------------------------------------------------------------------------
+-- CVE-project mapping table (from Code/resources/cveprojectdatabase.py)
+-- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cve_project (
     id SERIAL PRIMARY KEY,
     cve VARCHAR(30) NOT NULL,
@@ -46,6 +118,9 @@ CREATE TABLE IF NOT EXISTS cve_project (
     UNIQUE (cve, project_url)
 );
 
+-- ---------------------------------------------------------------------------
+-- CPE-project mapping table
+-- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cpe_project (
     cpe_name VARCHAR(255) NOT NULL,
     repo_url VARCHAR(512) NOT NULL,
@@ -53,6 +128,9 @@ CREATE TABLE IF NOT EXISTS cpe_project (
     UNIQUE (cpe_name, repo_url)
 );
 
+-- ---------------------------------------------------------------------------
+-- CVE-CPE mapper table
+-- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cve_cpe_mapper (
     id SERIAL PRIMARY KEY,
     cve_id VARCHAR(30) NOT NULL,
@@ -60,7 +138,9 @@ CREATE TABLE IF NOT EXISTS cve_cpe_mapper (
     UNIQUE (cve_id, cpe_name)
 );
 
--- Extracted from Code/collect_projects.py
+-- ---------------------------------------------------------------------------
+-- Fixes table (from Code/collect_projects.py create_fixes_table)
+-- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fixes (
     cve_id text,
     hash text,
